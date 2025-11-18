@@ -106,6 +106,9 @@ app.use('/cargo', cargoRoutes);
 const pagamentoRoutes = require('./routes/pagamentoRoutes');
 app.use('/pagamento', pagamentoRoutes);
 
+const imageRoutes = require('./routes/imageRoutes'); 
+app.use('/', imageRoutes); // Rota /upload-image
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Rota padrão

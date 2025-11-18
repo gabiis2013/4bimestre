@@ -1,4 +1,3 @@
-
 // Configuração da API, IP e porta.
 const API_BASE_URL = 'http://localhost:3001';
 let currentPersonId = null;
@@ -16,9 +15,18 @@ const btnSalvar = document.getElementById('btnSalvar');
 const produtosTableBody = document.getElementById('produtosTableBody');
 const messageContainer = document.getElementById('messageContainer');
 
+// >>> NOVOS ELEMENTOS DOM PARA IMAGEM <<<
+const imgProdutoVisualizacao = document.getElementById('imgProdutoVisualizacao');
+const imgProdutoInput = document.getElementById('imgProdutoInput');
+const imgURL = document.getElementById('imgURL');
+const btnCarregarImagem = document.getElementById('btnCarregarImagem');
+
+
 // Carregar lista de produtos ao inicializar
 document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();
+    // Garante que a imagem inicial seja o fallback
+    imgProdutoVisualizacao.src = '/imagens-produtos/000.png';
 });
 
 // Event Listeners
@@ -28,6 +36,10 @@ btnAlterar.addEventListener('click', alterarProduto);
 btnExcluir.addEventListener('click', excluirProduto);
 btnCancelar.addEventListener('click', cancelarOperacao);
 btnSalvar.addEventListener('click', salvarOperacao);
+
+// >>> NOVO EVENT LISTENER PARA UPLOAD DA IMAGEM <<<
+btnCarregarImagem.addEventListener('click', handleImageUpload);
+
 
 mostrarBotoes(true, false, false, false, false, false);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
 bloquearCampos(false);//libera pk e bloqueia os demais campos
@@ -56,6 +68,9 @@ function bloquearCampos(bloquearPrimeiro) {
 // Função para limpar formulário
 function limparFormulario() {
     form.reset();
+    // Garante que a imagem volta para o padrão quando o formulário é limpo
+    imgProdutoVisualizacao.src = '/imagens-produtos/000.png';
+    imgProdutoVisualizacao.alt = 'Imagem do Produto 01';
 }
 
 
@@ -83,6 +98,7 @@ function converterDataParaISO(dataString) {
 
 // Função para buscar produto por ID
 async function buscarProduto() {
+
     const id = searchId.value.trim();
     if (!id) {
         mostrarMensagem('Digite um ID para buscar', 'warning');
@@ -93,6 +109,8 @@ async function buscarProduto() {
     searchId.focus();
     try {
         const response = await fetch(`${API_BASE_URL}/produto/${id}`);
+
+        console.log(JSON.stringify(response));
 
         if (response.ok) {
             const produto = await response.json();
@@ -105,7 +123,7 @@ async function buscarProduto() {
             limparFormulario();
             searchId.value = id;
             mostrarBotoes(true, true, false, false, false, false); //mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
-            mostrarMensagem('Produto não encontrada. Você pode incluir um novo produto.', 'info');
+            mostrarMensagem('Produto não encontrado. Você pode incluir um novo produto.', 'info');
             bloquearCampos(false);//bloqueia a pk e libera os demais campos
             //enviar o foco para o campo de nome
         } else {
@@ -119,30 +137,133 @@ async function buscarProduto() {
 
 // Função para preencher formulário com dados da produto
 function preencherFormulario(produto) {
+
+
+
     currentPersonId = produto.idproduto;
     searchId.value = produto.idproduto;
     document.getElementById('nomeproduto').value = produto.nomeproduto || '';
-    document.getElementById('quantidadeemestoque').value = produto.quantidadeemestoque || '';
-    document.getElementById('precounitario').value = produto.precounitario || '';  
+    document.getElementById('quantidadeemestoque').value = produto.quantidadeemestoque || 0;
+    document.getElementById('precounitario').value = produto.precounitario || 0;
+
+    // Lógica para carregamento dinâmico da imagem com fallback
+    const imgElement = document.getElementById('imgProdutoVisualizacao');
+    const produtoId = produto.idproduto;
+
+    // =============================================================
+    // Aplicar o tamanho 200x200px ao elemento IMG
+    // Isso garante o tamanho de exibição, independentemente do arquivo de origem.
+    // =============================================================
+    alert(JSON.stringify(produto));
+    if (imgElement) {
+        imgElement.style.width = '200px';
+        imgElement.style.height = '200px';
+    }
+    // =============================================================
+
+
+    // Limpa qualquer erro anterior e tenta carregar a nova imagem
+    imgElement.onerror = function () {
+        // Se a imagem com o ID não for encontrada, carrega o fallback.
+        imgElement.src = '/imagens/produtos/000.png';
+        alert("passou aqui "+ imgElement.src)
+        imgElement.alt = 'Imagem Padrão não encontrada';
+        // Limpa o onerror para evitar loops caso o 000.png também falhe (improvável)
+        imgElement.onerror = null;
+    };
+
+    if (imgElement && produtoId) {
+        // Tenta carregar a imagem dinâmica (Isso pode disparar o onerror)
+        // Adiciona um timestamp para forçar o navegador a recarregar a imagem
+        const imagePath = `/imagens/produtos/${produtoId}.png?t=${new Date().getTime()}`; //or jpg, e
+        imgElement.src = imagePath;
+        imgElement.alt = `Imagem do Produto ID ${produtoId}`;
+
+    } else if (imgElement) {
+        // Se não houver ID do produto, mostra o fallback imediatamente
+        imgElement.src = '/imagens/produtos/000.png';
+        imgElement.alt = 'Imagem Padrão';
+        imgElement.onerror = null;
+    }
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////// VER    SE     SUBSTITUI     CERTO!!!!!///////////////////////////////////////////////////
+
+
+async function handleImageUpload() {
+    const id = searchId.value.trim();
+
+    // A imagem só pode ser salva/renomeada se houver um ID conhecido (Alteração ou Inclusão SALVA)
+    if (!id || (operacao !== 'alterar' && operacao !== 'incluir')) {
+        mostrarMensagem('Busque ou inclua o produto e esteja no modo de Alteração/Inclusão para carregar a imagem.', 'warning');
+        return;
+    }
+
+    const file = imgProdutoInput.files[0];
+    const url = imgURL.value.trim();
+
+    if (!file && !url) {
+        mostrarMensagem('Selecione um arquivo local OU cole uma URL para carregar.', 'warning');
+        return;
+    }
+
+    // 1. Prepara os dados para envio
+    let formData = new FormData();
+    formData.append('produtoId', id); // O ID será o novo nome do arquivo
+
+    if (file) {
+        // Opção 1: Upload de arquivo local
+        formData.append('imageSource', 'local');
+        formData.append('imageFile', file);
+    } else if (url) {
+        // Opção 2: Download de URL
+        formData.append('imageSource', 'url');
+        formData.append('imageUrl', url);
+    } else {
+        return; // Caso nenhum dado válido
+    }
+
+    //  mostrarMensagem('Enviando imagem para o servidor...', 'info');
+
+    try {
+        // 2. Envia para o novo endpoint de upload no backend
+        const response = await fetch(`${API_BASE_URL}/upload-image`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            // 3. Sucesso: Recarrega a imagem na tela para bustar o cache
+            const imagePath = `/imagens-produtos/${id}.png?t=${new Date().getTime()}`;
+            imgProdutoVisualizacao.src = imagePath;
+            mostrarMensagem('Imagem carregada e salva com sucesso!', 'success');
+
+            // 4. Limpa os campos após sucesso
+            imgProdutoInput.value = '';
+            imgURL.value = '';
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao salvar a imagem no servidor.');
+        }
+
+    } catch (error) {
+        console.error('Erro no upload da imagem:', error);
+        mostrarMensagem(`Erro no upload: ${error.message}`, 'error');
+    }
+}
+// >>> FIM DA NOVA FUNÇÃO <<<
+
 
 // Função para incluir produto
 async function incluirProduto() {
 
     mostrarMensagem('Digite os dados!', 'success');
     currentPersonId = searchId.value;
-    // console.log('Incluir nova produto - currentPersonId: ' + currentPersonId);
+    // console.log('Incluir novo produto - currentPersonId: ' + currentPersonId);
     limparFormulario();
     searchId.value = currentPersonId;
     bloquearCampos(true);
 
     mostrarBotoes(false, false, false, false, true, true); // mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
     document.getElementById('nomeproduto').focus();
-    document.getElementById('quantidadeemestoque').focus();
-    document.getElementById('precounitario').focus();
     operacao = 'incluir';
     // console.log('fim nova produto - currentPersonId: ' + currentPersonId);
 }
@@ -153,14 +274,8 @@ async function alterarProduto() {
     bloquearCampos(true);
     mostrarBotoes(false, false, false, false, true, true);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
     document.getElementById('nomeproduto').focus();
-    document.getElementById('quantidadeemestoque').focus();
-    document.getElementById('precounitario').focus();
     operacao = 'alterar';
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 // Função para excluir produto
 async function excluirProduto() {
@@ -180,8 +295,8 @@ async function salvarOperacao() {
     const produto = {
         idproduto: searchId.value,
         nomeproduto: formData.get('nomeproduto'),
-        quantidadeemestoque: formData.get('quantidadeemestoque'),
-        precounitario: formData.get('precounitario'),            
+        quantidadeemestoque_produto: formData.get('quantidadeemestoque'),
+        precounitario: formData.get('precounitario'),
     };
     let response = null;
     try {
@@ -209,7 +324,7 @@ async function salvarOperacao() {
             console.log('Produto excluído' + response.status);
         }
         if (response.ok && (operacao === 'incluir' || operacao === 'alterar')) {
-            const novoProduto = await response.json();
+            const novaProduto = await response.json();
             mostrarMensagem('Operação ' + operacao + ' realizada com sucesso!', 'success');
             limparFormulario();
             carregarProdutos();
@@ -224,7 +339,7 @@ async function salvarOperacao() {
         }
     } catch (error) {
         console.error('Erro:', error);
-        mostrarMensagem('Erro ao incluir ou alterar o produto', 'error');
+        mostrarMensagem('Erro ao incluir ou alterar a produto', 'error');
     }
 
     mostrarBotoes(true, false, false, false, false, false);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
@@ -244,8 +359,15 @@ function cancelarOperacao() {
 // Função para carregar lista de produtos
 async function carregarProdutos() {
     try {
-        const response = await fetch(`${API_BASE_URL}/produto`);
-    //    debugger
+        const rota = `${API_BASE_URL}/produto`;
+        // console.log("a rota " + rota);
+
+
+        const response = await fetch(rota);
+        //   console.log(JSON.stringify(response));
+
+
+        //    debugger
         if (response.ok) {
             const produtos = await response.json();
             renderizarTabelaProdutos(produtos);
@@ -257,10 +379,6 @@ async function carregarProdutos() {
         mostrarMensagem('Erro ao carregar lista de produtos', 'error');
     }
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////// VER    SE     SUBSTITUI     CERTO!!!!!///////////////////////////////////////////////////
 
 // Função para renderizar tabela de produtos
 function renderizarTabelaProdutos(produtos) {
@@ -274,17 +392,14 @@ function renderizarTabelaProdutos(produtos) {
                             ${produto.idproduto}
                         </button>
                     </td>
-                    <td>${produto.nomeproduto}</td>
-                    <td>${produto.quantidadeemestoque}</td>
-                    <td>${produto.precounitario}</td>
+                    <td>${produto.nomeproduto}</td>                  
+                    <td>${produto.quantidadeemestoque}</td>                  
+                    <td>${produto.precounitario}</td>                  
                                  
                 `;
         produtosTableBody.appendChild(row);
     });
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Função para selecionar produto da tabela
 async function selecionarProduto(id) {
