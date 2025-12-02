@@ -112,3 +112,41 @@ footer {
     background: #f0f0f0;
 }
 
+/* Produtos exibidos na home */
+.produtos-home {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.produto-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    border: 1px solid #e6e6e6;
+    border-radius: 6px;
+    background: #fff;
+}
+.produto-card img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+.produto-nome {
+    margin-top: 0.5rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.produto-preco {
+    margin-top: 0.2rem;
+    color: #1a5d3c;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+}
+

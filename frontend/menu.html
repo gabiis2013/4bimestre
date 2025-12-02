@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Menu Principal</title>
-  <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="/menu.css">
 </head>
 
 <body>
@@ -27,8 +27,7 @@
           <ul class="nav__submenu">
             <li class="nav__submenu-item"><a href="http://localhost:3001/cargo/abrirCrudCargo">Cargo</a></li>
             <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento/abrirCrudPagamento">Pagamento</a></li>
-            <li class="nav__submenu-item"><a href="http://localhost:3001/pessoa/abrirCrudPessoa">Pessoa</a></li> 
-            <li class="nav__submenu-item"><a href="http://localhost:3001/cliente/abrirCrudCliente">Cliente</a></li>
+            <li class="nav__submenu-item"><a href="http://localhost:3001/pessoa/abrirCrudPessoa">Pessoa (Cliente / Funcionário)</a></li> 
             <li class="nav__submenu-item"><a href="http://localhost:3001/produto/abrirCrudProduto">Produto</a></li>
            <li class="nav__submenu-item"><a href="http://localhost:3001/pedido/abrirCrudPedido">Pedido</a></li> 
            <li class="nav__submenu-item"><a href="http://localhost:3001/formadepagamento/abrirCrudFormaDePagamento">Forma De Pagamento</a></li>   
@@ -57,7 +56,10 @@
   <main>
 
     <section>
-      <p>section main....</p>
+      <h2>Todos os Produtos</h2>
+      <div id="produtosHome" class="produtos-home">
+        <!-- Produtos serão carregados via JavaScript -->
+      </div>
     </section>
 
   </main>
@@ -66,7 +68,7 @@
     <p>&copy; 2025 - Meu Site</p>
   </footer>
 
-  <script src="./menu.js"></script>
+  <script src="/menu.js"></script>
 
 </body>
 

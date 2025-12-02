@@ -46,13 +46,10 @@ exports.criarPessoa = async (req, res) => {
 }
 
 // Obter pessoa por CPF
-// Obter pessoa pelo CPF
 exports.obterPessoa = async (req, res) => {
   try {
-      
-   
-      const cpfpessoa = req.params.cpf; // antes: id
-      console.log("cpfpessoa "+req.params.cpf);
+      const cpfpessoa = req.params.cpf;
+      console.log("Buscando pessoa com CPF:", cpfpessoa);
       const result = await query('SELECT * FROM pessoa WHERE cpfpessoa = $1', [cpfpessoa]);
 
       if (result.rows.length === 0) {
@@ -69,9 +66,7 @@ exports.obterPessoa = async (req, res) => {
 // Atualizar pessoa
 exports.atualizarPessoa = async (req, res) => {
   try {
-    console.log("Todos os parâmetros atualizar:", JSON.stringify(req.params));
-      const cpfpessoa = req.params.cpfpessoa; // antes: id
-
+      const cpfpessoa = req.params.cpf;
 
       const { nomepessoa, emailpessoa, senhapessoa, datanascimentopessoa } = req.body;
 

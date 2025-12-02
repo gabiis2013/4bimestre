@@ -66,15 +66,11 @@ if (!porcentagemcomissao) {
 
 exports.obterFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'ID deve ser um número válido' });
-    }
+    const cpf = req.params.cpf || req.params.id;
 
     const result = await query(
       'SELECT * FROM funcionario WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (result.rows.length === 0) {
@@ -90,14 +86,14 @@ exports.obterFuncionario = async (req, res) => {
 
 exports.atualizarFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const cpf = req.params.cpf || req.params.id;
     const { cargoidcargo, salario, porcentagemcomissao } = req.body;
 
    
     // Verifica se a funcionario existe
     const existingPersonResult = await query(
       'SELECT * FROM funcionario WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (existingPersonResult.rows.length === 0) {
@@ -116,7 +112,7 @@ exports.atualizarFuncionario = async (req, res) => {
     // Atualiza a funcionario
     const updateResult = await query(
       'UPDATE funcionario SET cargoidcargo = $1, salario = $2, porcentagemcomissao = $3 WHERE pessoacpfpessoa = $4 RETURNING *',
-      [updatedFields.cargoidcargo, salario, porcentagemcomissao, id]
+      [updatedFields.cargoidcargo, updatedFields.salario, updatedFields.porcentagemcomissao, cpf]
     );
 
     res.json(updateResult.rows[0]);
@@ -130,11 +126,11 @@ exports.atualizarFuncionario = async (req, res) => {
 
 exports.deletarFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const cpf = req.params.cpf || req.params.id;
     // Verifica se a funcionario existe
     const existingPersonResult = await query(
       'SELECT * FROM funcionario WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (existingPersonResult.rows.length === 0) {
@@ -144,7 +140,7 @@ exports.deletarFuncionario = async (req, res) => {
     // Deleta a funcionario (as constraints CASCADE cuidarão das dependências)
     await query(
       'DELETE FROM funcionario WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     res.status(204).send();

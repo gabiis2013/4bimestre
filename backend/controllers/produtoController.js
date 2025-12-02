@@ -3,6 +3,7 @@ const { query } = require('../database');
 // Funções do controller
 
 const path = require('path');
+const fs = require('fs/promises');
 
 exports.abrirCrudProduto = (req, res) => {
  // console.log('produtoController - Rota /abrirCrudProduto - abrir o crudProduto');
@@ -143,6 +144,22 @@ exports.atualizarProduto = async (req, res) => {
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
+
+// Deleta a imagem do produto com ID fornecido se existir
+async function deletarImagemProduto(id) {
+  try {
+    const dir = path.join(__dirname, '..', '..', 'imagens', 'produtos');
+    const filePath = path.join(dir, `${id}.png`);
+    await fs.unlink(filePath);
+    console.log('Imagem do produto deletada:', filePath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      // Arquivo não existe, ignora
+      return;
+    }
+    console.error('Erro ao deletar imagem do produto:', err);
+  }
+}
 
 
 exports.deletarProduto = async (req, res) => {

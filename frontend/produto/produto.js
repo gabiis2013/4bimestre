@@ -26,7 +26,8 @@ const btnCarregarImagem = document.getElementById('btnCarregarImagem');
 document.addEventListener('DOMContentLoaded', () => {
     carregarProdutos();
     // Garante que a imagem inicial seja o fallback
-    imgProdutoVisualizacao.src = '/imagens-produtos/000.png';
+    // fallback to a default image; the server serves '/imagens'
+    imgProdutoVisualizacao.src = '/imagens/000.png';
 });
 
 // Event Listeners
@@ -69,7 +70,7 @@ function bloquearCampos(bloquearPrimeiro) {
 function limparFormulario() {
     form.reset();
     // Garante que a imagem volta para o padrão quando o formulário é limpo
-    imgProdutoVisualizacao.src = '/imagens-produtos/000.png';
+    imgProdutoVisualizacao.src = '/imagens/000.png';
     imgProdutoVisualizacao.alt = 'Imagem do Produto 01';
 }
 
@@ -109,8 +110,7 @@ async function buscarProduto() {
     searchId.focus();
     try {
         const response = await fetch(`${API_BASE_URL}/produto/${id}`);
-
-        console.log(JSON.stringify(response));
+        console.log('GET /produto/' + id + ' -> status', response.status);
 
         if (response.ok) {
             const produto = await response.json();
@@ -154,7 +154,7 @@ function preencherFormulario(produto) {
     // Aplicar o tamanho 200x200px ao elemento IMG
     // Isso garante o tamanho de exibição, independentemente do arquivo de origem.
     // =============================================================
-    alert(JSON.stringify(produto));
+    // Produto recebido
     if (imgElement) {
         imgElement.style.width = '200px';
         imgElement.style.height = '200px';
@@ -164,9 +164,13 @@ function preencherFormulario(produto) {
 
     // Limpa qualquer erro anterior e tenta carregar a nova imagem
     imgElement.onerror = function () {
-        // Se a imagem com o ID não for encontrada, carrega o fallback.
-        imgElement.src = '/imagens/produtos/000.png';
-        alert("passou aqui "+ imgElement.src)
+        // Se a imagem com o ID não for encontrada, tenta alternativa em '/imagens/{id}.png' antes do fallback
+        const altPath = `/imagens/${produtoId}.png`;
+        if (imgElement.src !== altPath) {
+            imgElement.src = altPath;
+            return;
+        }
+        imgElement.src = '/imagens/000.png';
         imgElement.alt = 'Imagem Padrão não encontrada';
         // Limpa o onerror para evitar loops caso o 000.png também falhe (improvável)
         imgElement.onerror = null;
@@ -175,13 +179,13 @@ function preencherFormulario(produto) {
     if (imgElement && produtoId) {
         // Tenta carregar a imagem dinâmica (Isso pode disparar o onerror)
         // Adiciona um timestamp para forçar o navegador a recarregar a imagem
-        const imagePath = `/imagens/produtos/${produtoId}.png?t=${new Date().getTime()}`; //or jpg, e
+        const imagePath = `/imagens/produtos/${produtoId}.png?t=${new Date().getTime()}`; //or jpg, etc
         imgElement.src = imagePath;
         imgElement.alt = `Imagem do Produto ID ${produtoId}`;
 
     } else if (imgElement) {
         // Se não houver ID do produto, mostra o fallback imediatamente
-        imgElement.src = '/imagens/produtos/000.png';
+        imgElement.src = '/imagens/000.png';
         imgElement.alt = 'Imagem Padrão';
         imgElement.onerror = null;
     }
@@ -231,8 +235,9 @@ async function handleImageUpload() {
         });
 
         if (response.ok) {
+            const data = await response.json();
             // 3. Sucesso: Recarrega a imagem na tela para bustar o cache
-            const imagePath = `/imagens-produtos/${id}.png?t=${new Date().getTime()}`;
+            const imagePath = (data && data.url) ? `${data.url}?t=${new Date().getTime()}` : `/imagens/produtos/${id}.png?t=${new Date().getTime()}`;
             imgProdutoVisualizacao.src = imagePath;
             mostrarMensagem('Imagem carregada e salva com sucesso!', 'success');
 
@@ -295,7 +300,7 @@ async function salvarOperacao() {
     const produto = {
         idproduto: searchId.value,
         nomeproduto: formData.get('nomeproduto'),
-        quantidadeemestoque_produto: formData.get('quantidadeemestoque'),
+        quantidadeemestoque: formData.get('quantidadeemestoque'),
         precounitario: formData.get('precounitario'),
     };
     let response = null;
@@ -325,10 +330,10 @@ async function salvarOperacao() {
         }
         if (response.ok && (operacao === 'incluir' || operacao === 'alterar')) {
             const novaProduto = await response.json();
-            mostrarMensagem('Operação ' + operacao + ' realizada com sucesso!', 'success');
-            limparFormulario();
+            mostrarMensagem('Operação ' + operacao + ' realizada com sucesso! Agora você pode enviar a imagem.', 'success');
+            // Preenche o formulário com o novo produto salvo
+            preencherFormulario(novaProduto);
             carregarProdutos();
-
         } else if (operacao !== 'excluir') {
             const error = await response.json();
             mostrarMensagem(error.error || 'Erro ao incluir produto', 'error');

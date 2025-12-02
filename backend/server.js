@@ -21,6 +21,9 @@ console.log('Caminho frontend:', caminhoFrontend);
 
 app.use(express.static(caminhoFrontend));
 
+// Serve the images directory so frontend can reach '/imagens/...'
+app.use('/imagens', express.static(path.join(__dirname, '..', 'imagens')));
+
 
 
 app.use(cookieParser());

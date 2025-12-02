@@ -7,8 +7,8 @@ const pessoaController = require('./../controllers/pessoaController');
 router.get('/abrirCrudPessoa', pessoaController.abrirCrudPessoa);
 router.get('/', pessoaController.listarPessoas);
 router.post('/', pessoaController.criarPessoa);
-router.get('/:cpfPessoa', pessoaController.obterPessoa);
-router.put('/:cpfPessoa', pessoaController.atualizarPessoa);
-router.delete('/:cpfPessoa', pessoaController.deletarPessoa);
+router.get('/:cpf', pessoaController.obterPessoa);
+router.put('/:cpf', pessoaController.atualizarPessoa);
+router.delete('/:cpf', pessoaController.deletarPessoa);
 
 module.exports = router;

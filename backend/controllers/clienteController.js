@@ -56,15 +56,11 @@ if (!rendacliente) {
 
 exports.obterCliente = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'ID deve ser um número válido' });
-    }
+    const cpf = req.params.cpf || req.params.id;
 
     const result = await query(
       'SELECT * FROM cliente WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (result.rows.length === 0) {
@@ -80,14 +76,14 @@ exports.obterCliente = async (req, res) => {
 
 exports.atualizarCliente = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const cpf = req.params.cpf || req.params.id;
     const { rendacliente } = req.body;
 
    
     // Verifica se a cliente existe
     const existingPersonResult = await query(
       'SELECT * FROM cliente WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (existingPersonResult.rows.length === 0) {
@@ -100,15 +96,12 @@ exports.atualizarCliente = async (req, res) => {
       rendacliente: rendacliente !== undefined ? rendacliente : currentPerson.rendacliente    
     };
   
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Atualiza a cliente
     const updateResult = await query(
       'UPDATE cliente SET rendacliente = $1 WHERE pessoacpfpessoa = $2 RETURNING *',
-      [updatedFields.rendacliente, id]
+      [updatedFields.rendacliente, cpf]
     );
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     res.json(updateResult.rows[0]);
   } catch (error) {
@@ -121,11 +114,11 @@ exports.atualizarCliente = async (req, res) => {
 
 exports.deletarCliente = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const cpf = req.params.cpf || req.params.id;
     // Verifica se a cliente existe
     const existingPersonResult = await query(
       'SELECT * FROM cliente WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     if (existingPersonResult.rows.length === 0) {
@@ -135,7 +128,7 @@ exports.deletarCliente = async (req, res) => {
     // Deleta a cliente (as constraints CASCADE cuidarão das dependências)
     await query(
       'DELETE FROM cliente WHERE pessoacpfpessoa = $1',
-      [id]
+      [cpf]
     );
 
     res.status(204).send();
