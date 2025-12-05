@@ -102,32 +102,21 @@ function bloquearCampos(bloquearPrimeiro) {
     const inputs = form.querySelectorAll('input, select');
     inputs.forEach((input, index) => {
         if (index === 0) {
+            // Primeiro elemento - bloqueia se bloquearPrimeiro for true, libera se for false
             input.disabled = bloquearPrimeiro;
         } else {
+            // Demais elementos - faz o oposto do primeiro
             input.disabled = !bloquearPrimeiro;
         }
     });
-    
-    // Garantir que os checkboxes sempre fiquem habilitados durante alteração
-    if (bloquearPrimeiro && operacao === 'alterar') {
-        chkFuncionario.disabled = false;
-        chkCliente.disabled = false;
-    }
 }
 
 // Função para limpar formulário
 function limparFormulario() {
     form.reset();
-    currentPersonCpf = null;
-    formFieldsCliente.style.display = 'none';
-    formFieldsFuncionario.style.display = 'none';
-    chkCliente.checked = false;
-    chkFuncionario.checked = false;
-    senhaInput.setAttribute('type', 'password');
-    toggleSenha.querySelector('i').classList.remove('fa-eye-slash');
 }
 
-// Função para mostrar/ocultar botões
+
 function mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar) {
     btnBuscar.style.display = btBuscar ? 'inline-block' : 'none';
     btnIncluir.style.display = btIncluir ? 'inline-block' : 'none';
@@ -137,54 +126,48 @@ function mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCa
     btnCancelar.style.display = btCancelar ? 'inline-block' : 'none';
 }
 
-// Função para carregar cargos
-async function carregarCargos() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/cargo`);
-        if (!response.ok) throw new Error('Erro ao carregar cargos');
-
-        const cargos = await response.json();
-        cargoSelect.innerHTML = '<option value="">Selecione um cargo</option>';
-
-        cargos.forEach(cargo => {
-            const option = document.createElement('option');
-            option.value = cargo.idcargo;
-            option.textContent = cargo.nomecargo;
-            cargoSelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Erro ao carregar cargos:', error);
-        mostrarMensagem('Erro ao carregar cargos', 'error');
-    }
+// Função para formatar data para exibição
+function formatarData(dataString) {
+    if (!dataString) return '';
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR');
 }
 
-// Função para buscar pessoa por CPF
+// Função para converter data para formato ISO
+function converterDataParaISO(dataString) {
+    if (!dataString) return null;
+    return new Date(dataString).toISOString();
+}
+// Buscar pessoa por CPF
 async function buscarPessoa() {
     const cpf = searchId.value.trim();
     if (!cpf) {
         mostrarMensagem('Digite um CPF para buscar', 'warning');
         return;
     }
-    if (cpf.length !== 11) {
-        mostrarMensagem('O CPF deve conter 11 dígitos.', 'warning');
-        return;
-    }
+
+    bloquearCampos(false);
+    searchId.focus();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/pessoa/${cpf}`);
+        // ⚡ Usando cpf em vez de id
+        let url = `${API_BASE_URL}/pessoa/${cpf}`;
+        console.log(url)
+        const response = await fetch(url);
 
         if (response.ok) {
             const pessoa = await response.json();
-            await preencherFormulario(pessoa);
+            preencherFormulario(pessoa);
             mostrarBotoes(true, false, true, true, false, false);
             mostrarMensagem('Pessoa encontrada!', 'success');
+            currentPersonCpf = cpf;
         } else if (response.status === 404) {
             limparFormulario();
             searchId.value = cpf;
-            cpfInput.value = cpf;
             mostrarBotoes(true, true, false, false, false, false);
             mostrarMensagem('Pessoa não encontrada. Você pode incluir uma nova pessoa.', 'info');
             bloquearCampos(false);
+            currentPersonCpf = cpf;
         } else {
             throw new Error('Erro ao buscar pessoa');
         }
@@ -194,362 +177,134 @@ async function buscarPessoa() {
     }
 }
 
-// Função para preencher formulário com dados da pessoa
-async function preencherFormulario(pessoa) {
-    currentPersonCpf = pessoa.cpfpessoa;
-    searchId.value = pessoa.cpfpessoa;
-    cpfInput.value = pessoa.cpfpessoa;
-    document.getElementById('nome_pessoa').value = pessoa.nomepessoa || '';
-    document.getElementById('email_pessoa').value = pessoa.emailpessoa || '';
-    document.getElementById('senha_pessoa').value = pessoa.senhapessoa || '';
 
+// Função para preencher formulário com dados da pessoa
+function preencherFormulario(pessoa) {
+    currentPersonId = pessoa.cpfpessoa;
+    searchId.value = pessoa.cpfpessoa;
+    document.getElementById('nomepessoa').value = pessoa.nomepessoa || '';
+    document.getElementById('emailpessoa').value = pessoa.emailpessoa || '';
+    document.getElementById('senhapessoa').value = pessoa.senhapessoa || '';
+
+    // Formatação da data para input type="date"
     if (pessoa.datanascimentopessoa) {
         const data = new Date(pessoa.datanascimentopessoa);
         const dataFormatada = data.toISOString().split('T')[0];
-        document.getElementById('data_nascimento_pessoa').value = dataFormatada;
+        document.getElementById('datanascimentopessoa').value = dataFormatada;
     } else {
-        document.getElementById('data_nascimento_pessoa').value = '';
+        document.getElementById('datanascimentopessoa').value = '';
     }
-
-    // Resetar checkboxes e campos antes de preencher
-    chkCliente.checked = false;
-    chkFuncionario.checked = false;
-    formFieldsCliente.style.display = 'none';
-    formFieldsFuncionario.style.display = 'none';
-    document.getElementById('renda_cliente').value = '';
-    document.getElementById('id_cargo').value = '';
-    document.getElementById('salario_funcionario').value = '';
-    document.getElementById('porcentagem_comissao').value = '';
-
-    // Buscar dados de cliente
-    try {
-        const clienteRes = await fetch(`${API_BASE_URL}/cliente/${pessoa.cpfpessoa}`);
-        if (clienteRes.ok) {
-            const cliente = await clienteRes.json();
-            chkCliente.checked = true;
-            formFieldsCliente.style.display = 'block';
-            document.getElementById('renda_cliente').value = cliente.rendacliente || 0;
-        }
-    } catch (error) {
-        console.error('Erro ao verificar cliente:', error);
-        chkCliente.checked = false;
-    }
-
-    // Buscar dados de funcionário
-    try {
-        const funcRes = await fetch(`${API_BASE_URL}/funcionario/${pessoa.cpfpessoa}`);
-        if (funcRes.ok) {
-            const funcionario = await funcRes.json();
-            chkFuncionario.checked = true;
-            formFieldsFuncionario.style.display = 'block';
-            document.getElementById('id_cargo').value = funcionario.cargoidcargo || '';
-            document.getElementById('salario_funcionario').value = funcionario.salario || 0;
-            document.getElementById('porcentagem_comissao').value = funcionario.porcentagemcomissao || 0;
-        }
-    } catch (error) {
-        console.error('Erro ao verificar funcionário:', error);
-        chkFuncionario.checked = false;
-    }
+    
 }
 
+
 // Função para incluir pessoa
-function incluirPessoa() {
-    mostrarMensagem('Digite os dados da nova pessoa!', 'info');
-    currentPersonCpf = searchId.value;
+async function incluirPessoa() {
+
+    mostrarMensagem('Digite os dados!', 'success');
+    currentPersonId = searchId.value;
+    // console.log('Incluir nova pessoa - currentPersonId: ' + currentPersonId);
     limparFormulario();
-    searchId.value = currentPersonCpf;
-    cpfInput.value = currentPersonCpf;
+    searchId.value = currentPersonId;
     bloquearCampos(true);
-    mostrarBotoes(false, false, false, false, true, true);
-    document.getElementById('nome_pessoa').focus();
+
+    mostrarBotoes(false, false, false, false, true, true); // mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
+    document.getElementById('nomepessoa').focus();
     operacao = 'incluir';
+    // console.log('fim nova pessoa - currentPersonId: ' + currentPersonId);
 }
 
 // Função para alterar pessoa
-function alterarPessoa() {
-    mostrarMensagem('Altere os dados da pessoa!', 'info');
+async function alterarPessoa() {
+    mostrarMensagem('Digite os dados!', 'success');
+    currentPersonId = searchId.value;
     bloquearCampos(true);
-    mostrarBotoes(false, false, false, false, true, true);
-    document.getElementById('nome_pessoa').focus();
+    mostrarBotoes(false, false, false, false, true, true);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
+    document.getElementById('nomepessoa').focus();
     operacao = 'alterar';
 }
 
 // Função para excluir pessoa
-function excluirPessoa() {
-    mostrarMensagem('Confirme a exclusão salvando...', 'warning');
-    bloquearCampos(false);
-    mostrarBotoes(false, false, false, false, true, true);
+async function excluirPessoa() {
+    mostrarMensagem('Excluindo pessoa...', 'info');
+    currentPersonId = searchId.value;
+    //bloquear searchId
+    searchId.disabled = true;
+    bloquearCampos(false); // libera os demais campos
+    mostrarBotoes(false, false, false, false, true, true);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)           
     operacao = 'excluir';
 }
 
-// Função para excluir associações de forma robusta
-async function excluirAssociacoes(cpf) {
-    const resultados = {
-        funcionario: false,
-        cliente: false,
-        erros: []
-    };
-
-    // Tentar excluir funcionário
-    try {
-        const funcResponse = await fetch(`${API_BASE_URL}/funcionario/${cpf}`, {
-            method: 'DELETE'
-        });
-        
-        if (funcResponse.ok) {
-            resultados.funcionario = true;
-            console.log(`Funcionário com CPF ${cpf} excluído com sucesso`);
-        } else if (funcResponse.status === 404) {
-            console.log(`Funcionário com CPF ${cpf} não existe (ok)`);
-            resultados.funcionario = true;
-        } else {
-            const errorData = await funcResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
-            resultados.erros.push(`Funcionário: ${errorData.error || funcResponse.statusText}`);
-        }
-    } catch (error) {
-        console.error(`Erro ao excluir funcionário:`, error);
-        resultados.erros.push(`Funcionário: ${error.message}`);
-    }
-
-    // Tentar excluir cliente
-    try {
-        const clienteResponse = await fetch(`${API_BASE_URL}/cliente/${cpf}`, {
-            method: 'DELETE'
-        });
-        
-        if (clienteResponse.ok) {
-            resultados.cliente = true;
-            console.log(`Cliente com CPF ${cpf} excluído com sucesso`);
-        } else if (clienteResponse.status === 404) {
-            console.log(`Cliente com CPF ${cpf} não existe (ok)`);
-            resultados.cliente = true;
-        } else {
-            const errorData = await clienteResponse.json().catch(() => ({ error: 'Erro desconhecido' }));
-            resultados.erros.push(`Cliente: ${errorData.error || clienteResponse.statusText}`);
-        }
-    } catch (error) {
-        console.error(`Erro ao excluir cliente:`, error);
-        resultados.erros.push(`Cliente: ${error.message}`);
-    }
-
-    return resultados;
-}
-
-// Função salvarOperacao melhorada
 async function salvarOperacao() {
+    console.log('Operação:', operacao + ' - currentPersonId: ' + currentPersonId + ' - searchId: ' + searchId.value);
+
+    const formData = new FormData(form);
+    const pessoa = {
+        cpfpessoa: searchId.value,
+        nomepessoa: formData.get('nomepessoa'),
+        emailpessoa: formData.get('emailpessoa'),
+        datanascimentopessoa: formData.get('datanascimentopessoa'),
+        senhapessoa: formData.get('senhapessoa')
+
+
+    };
+    let response = null;
     try {
-        if (operacao === 'excluir') {
-            // FLUXO DE EXCLUSÃO
-            if (!currentPersonCpf) {
-                mostrarMensagem('Nenhuma pessoa selecionada para exclusão!', 'error');
-                return;
-            }
-
-            console.log(`Iniciando exclusão da pessoa com CPF: ${currentPersonCpf}`);
-
-            // Excluir as associações
-            const resultadosAssociacoes = await excluirAssociacoes(currentPersonCpf);
-            
-            if (resultadosAssociacoes.erros.length > 0) {
-                console.error('Erros ao excluir associações:', resultadosAssociacoes.erros);
-                mostrarMensagem(`Avisos: ${resultadosAssociacoes.erros.join('; ')}`, 'warning');
-            }
-
-            // Excluir a pessoa
-            const responsePessoa = await fetch(`${API_BASE_URL}/pessoa/${currentPersonCpf}`, {
-                method: 'DELETE'
-            });
-
-            if (responsePessoa.ok) {
-                mostrarMensagem('Pessoa excluída com sucesso!', 'success');
-                limparFormulario();
-                await carregarPessoas();
-                mostrarBotoes(true, false, false, false, false, false);
-                bloquearCampos(false);
-                searchId.focus();
-                return;
-            } else {
-                const error = await responsePessoa.json().catch(() => ({ error: 'Erro desconhecido' }));
-                throw new Error(error.error || `Erro HTTP ${responsePessoa.status}`);
-            }
-        }
-
-        // FLUXO NORMAL PARA INCLUIR E ALTERAR
-        const formData = new FormData(form);
-        const pessoaData = {
-            cpfpessoa: formData.get('cpf_pessoa'),
-            nomepessoa: formData.get('nome_pessoa'),
-            emailpessoa: formData.get('email_pessoa'),
-            senhapessoa: formData.get('senha_pessoa'),
-            datanascimentopessoa: formData.get('data_nascimento_pessoa')
-        };
-
-        if (!pessoaData.nomepessoa || !pessoaData.emailpessoa || !pessoaData.cpfpessoa || !pessoaData.senhapessoa || !pessoaData.datanascimentopessoa) {
-            mostrarMensagem('Preencha todos os campos obrigatórios!', 'warning');
-            return;
-        }
-
-        if (pessoaData.cpfpessoa.length !== 11) {
-            mostrarMensagem('O CPF deve conter 11 dígitos.', 'warning');
-            return;
-        }
-
-        if (chkFuncionario.checked) {
-            if (!formData.get('salario_funcionario') || !formData.get('id_cargo')) {
-                mostrarMensagem('Preencha salário e cargo para funcionários!', 'warning');
-                return;
-            }
-        }
-
-        let responsePessoa;
-        
         if (operacao === 'incluir') {
-            responsePessoa = await fetch(`${API_BASE_URL}/pessoa`, {
+            response = await fetch(`${API_BASE_URL}/pessoa`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pessoaData)
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(pessoa)
             });
         } else if (operacao === 'alterar') {
-            responsePessoa = await fetch(`${API_BASE_URL}/pessoa/${currentPersonCpf}`, {
+            console.log(pessoa)
+            response = await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pessoaData)
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(pessoa)
             });
+        } else if (operacao === 'excluir') {
+            // console.log('Excluindo pessoa com CPF:', currentPersonId);
+            response = await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, {
+                method: 'DELETE'
+            });
+            console.log('Pessoa excluída' + response.status);
         }
-
-        if (responsePessoa.ok) {
-            // Gerenciar funcionário
-            const isFuncionarioChecked = chkFuncionario.checked;
-            const funcionarioExists = await verificarExistencia(`${API_BASE_URL}/funcionario/${pessoaData.cpfpessoa}`);
-
-            if (isFuncionarioChecked) {
-                const funcionarioData = {
-                    pessoacpfpessoa: pessoaData.cpfpessoa,
-                    cargoidcargo: parseInt(formData.get('id_cargo')),
-                    salario: parseFloat(formData.get('salario_funcionario')),
-                    porcentagemcomissao: parseFloat(formData.get('porcentagem_comissao')) || 0
-                };
-                
-                try {
-                    if (funcionarioExists) {
-                        // Atualizar funcionário existente
-                        const funcResponse = await fetch(`${API_BASE_URL}/funcionario/${pessoaData.cpfpessoa}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(funcionarioData)
-                        });
-                        
-                        if (!funcResponse.ok) {
-                            const error = await funcResponse.json();
-                            console.error('Erro ao atualizar funcionário:', error);
-                        }
-                    } else {
-                        // Criar novo funcionário
-                        const funcResponse = await fetch(`${API_BASE_URL}/funcionario`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(funcionarioData)
-                        });
-                        
-                        if (!funcResponse.ok) {
-                            const error = await funcResponse.json();
-                            console.error('Erro ao criar funcionário:', error);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Erro ao gerenciar funcionário:', error);
-                }
-            } else if (!isFuncionarioChecked && funcionarioExists) {
-                // Remover funcionário se desmarcado
-                try {
-                    await fetch(`${API_BASE_URL}/funcionario/${pessoaData.cpfpessoa}`, {
-                        method: 'DELETE'
-                    });
-                } catch (error) {
-                    console.error('Erro ao excluir funcionário:', error);
-                }
-            }
-
-            // Gerenciar cliente
-            const isClienteChecked = chkCliente.checked;
-            const clienteExists = await verificarExistencia(`${API_BASE_URL}/cliente/${pessoaData.cpfpessoa}`);
-
-            if (isClienteChecked && !clienteExists) {
-                // Criar novo cliente
-                const clienteData = {
-                    pessoacpfpessoa: pessoaData.cpfpessoa,
-                    rendacliente: parseFloat(formData.get('renda_cliente')) || 0
-                };
-                
-                try {
-                    const clienteResponse = await fetch(`${API_BASE_URL}/cliente`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(clienteData)
-                    });
-                    
-                    if (!clienteResponse.ok) {
-                        const error = await clienteResponse.json();
-                        console.error('Erro ao criar cliente:', error);
-                    }
-                } catch (error) {
-                    console.error('Erro ao criar cliente:', error);
-                }
-            } else if (isClienteChecked && clienteExists) {
-                // Atualizar cliente existente
-                const clienteData = {
-                    pessoacpfpessoa: pessoaData.cpfpessoa,
-                    rendacliente: parseFloat(formData.get('renda_cliente')) || 0
-                };
-                
-                try {
-                    const clienteResponse = await fetch(`${API_BASE_URL}/cliente/${pessoaData.cpfpessoa}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(clienteData)
-                    });
-                    
-                    if (!clienteResponse.ok) {
-                        const error = await clienteResponse.json();
-                        console.error('Erro ao atualizar cliente:', error);
-                    }
-                } catch (error) {
-                    console.error('Erro ao atualizar cliente:', error);
-                }
-            } else if (!isClienteChecked && clienteExists) {
-                // Remover cliente se desmarcado
-                try {
-                    await fetch(`${API_BASE_URL}/cliente/${pessoaData.cpfpessoa}`, {
-                        method: 'DELETE'
-                    });
-                } catch (error) {
-                    console.error('Erro ao excluir cliente:', error);
-                }
-            }
-
-            mostrarMensagem(`Operação de ${operacao} realizada com sucesso!`, 'success');
+        if (response.ok && (operacao === 'incluir' || operacao === 'alterar')) {
+            const novaPessoa = await response.json();
+            mostrarMensagem('Operação ' + operacao + ' realizada com sucesso!', 'success');
             limparFormulario();
-            await carregarPessoas();
+            carregarPessoas();
+
+        } else if (operacao !== 'excluir') {
+            const error = await response.json();
+            mostrarMensagem(error.error || 'Erro ao incluir pessoa', 'error');
         } else {
-            const error = await responsePessoa.json();
-            mostrarMensagem(error.error || `Erro ao ${operacao} pessoa`, 'error');
+            mostrarMensagem('Pessoa excluída com sucesso!', 'success');
+            limparFormulario();
+            carregarPessoas();
         }
     } catch (error) {
         console.error('Erro:', error);
-        mostrarMensagem(`Erro ao ${operacao} pessoa: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao incluir ou alterar a pessoa', 'error');
     }
 
-    mostrarBotoes(true, false, false, false, false, false);
-    bloquearCampos(false);
-    searchId.focus();
+    mostrarBotoes(true, false, false, false, false, false);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
+    bloquearCampos(false);//libera pk e bloqueia os demais campos
+    document.getElementById('searchId').focus();
 }
 
 // Função para cancelar operação
 function cancelarOperacao() {
     limparFormulario();
-    mostrarBotoes(true, false, false, false, false, false);
-    bloquearCampos(false);
-    searchId.focus();
+    mostrarBotoes(true, false, false, false, false, false);// mostrarBotoes(btBuscar, btIncluir, btAlterar, btExcluir, btSalvar, btCancelar)
+    bloquearCampos(false);//libera pk e bloqueia os demais campos
+    document.getElementById('searchId').focus();
     mostrarMensagem('Operação cancelada', 'info');
 }
 
@@ -557,9 +312,10 @@ function cancelarOperacao() {
 async function carregarPessoas() {
     try {
         const response = await fetch(`${API_BASE_URL}/pessoa`);
+        //    debugger
         if (response.ok) {
             const pessoas = await response.json();
-            await renderizarTabelaPessoas(pessoas);
+            renderizarTabelaPessoas(pessoas);
         } else {
             throw new Error('Erro ao carregar pessoas');
         }
@@ -570,87 +326,27 @@ async function carregarPessoas() {
 }
 
 // Função para renderizar tabela de pessoas
-async function renderizarTabelaPessoas(pessoas) {
+function renderizarTabelaPessoas(pessoas) {
     pessoasTableBody.innerHTML = '';
 
-    for (const pessoa of pessoas) {
+    pessoas.forEach(pessoa => {
         const row = document.createElement('tr');
-        
-        let tiposPessoa = [];
-        let cargoNome = '-';
-        
-        // Buscar dados de cliente
-        try {
-            const clienteRes = await fetch(`${API_BASE_URL}/cliente/${pessoa.cpfpessoa}`);
-            if (clienteRes.ok) {
-                tiposPessoa.push('Cliente');
-            }
-        } catch (err) {
-            console.error('Erro ao buscar cliente:', err);
-        }
-        
-        // Buscar dados de funcionário
-        try {
-            const funcRes = await fetch(`${API_BASE_URL}/funcionario/${pessoa.cpfpessoa}`);
-            if (funcRes.ok) {
-                const funcionario = await funcRes.json();
-                tiposPessoa.push('Funcionário');
-                
-                // Buscar nome do cargo
-                if (funcionario.cargoidcargo) {
-                    try {
-                        const cargoRes = await fetch(`${API_BASE_URL}/cargo/${funcionario.cargoidcargo}`);
-                        if (cargoRes.ok) {
-                            const cargo = await cargoRes.json();
-                            cargoNome = cargo.nomecargo || '-';
-                        }
-                    } catch (err) {
-                        console.error('Erro ao buscar cargo:', err);
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Erro ao buscar funcionário:', err);
-        }
-        
-        const tiposTexto = tiposPessoa.length > 0 ? tiposPessoa.join(', ') : '-';
-        
         row.innerHTML = `
-            <td>
-                <button class="btn-id" onclick="selecionarPessoa('${pessoa.cpfpessoa}')">
-                    ${pessoa.cpfpessoa}
-                </button>
-            </td>
-            <td>${pessoa.nomepessoa}</td>
-            <td>${pessoa.emailpessoa}</td>
-            <td>${formatarData(pessoa.datanascimentopessoa)}</td>
-            <td>${tiposTexto}</td>
-            <td>${cargoNome}</td>                 
-        `;
+                    <td>
+                        <button class="btn-id" onclick="selecionarPessoa(${pessoa.cpfpessoa})">
+                            ${pessoa.cpfpessoa}
+                        </button>
+                    </td>
+                    <td>${pessoa.nomepessoa}</td>
+                    <td>${pessoa.emailpessoa}</td>
+                    <td>${formatarData(pessoa.datanascimentopessoa)}</td>                 
+                `;
         pessoasTableBody.appendChild(row);
-    }
+    });
 }
 
 // Função para selecionar pessoa da tabela
 async function selecionarPessoa(cpf) {
     searchId.value = cpf;
     await buscarPessoa();
-}
-
-// Função auxiliar para verificar existência
-async function verificarExistencia(url) {
-    try {
-        const response = await fetch(url);
-        return response.ok;
-    } catch (error) {
-        console.error('Erro ao verificar existência:', error);
-        return false;
-    }
-}
-
-// Função para formatar data para exibição
-function formatarData(dataString) {
-    if (!dataString) return '-';
-    const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR');
 }

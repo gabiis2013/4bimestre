@@ -68,6 +68,7 @@ async function carregarProdutosHome() {
       container.appendChild(div);
     });
   } catch (err) {
+    container.innerHTML = '<p>Erro ao carregar produtos.</p>';
     console.error('Erro ao carregar produtos no menu:', err);
   }
 }

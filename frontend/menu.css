@@ -14,12 +14,12 @@ body {
 
 /* Cabeçalho */
 header {
-    padding: 0rem 0rem 0rem 0rem;
+    padding: 0;
     background-color: aquamarine;
 }
 
 header h1 {
-    margin-bottom: 0rem;
+    margin-bottom: 0;
     font-size: 1.8rem;
     color: #1a5d3c;
 }
@@ -30,11 +30,27 @@ header h1 {
     align-items: center;
     font-family: Arial, sans-serif;
     font-size: 16px;
-    padding: 0.1rem 1.5rem 1.5rem 0.1rem;
+    padding: 1rem 1.5rem;
 }
 
 .topo h3 {
     margin: 0;
+    color: #1a5d3c;
+}
+
+.topo select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #1a5d3c;
+    border-radius: 4px;
+    background: white;
+    color: #1a5d3c;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.topo select:hover {
+    background: #f0f0f0;
 }
 
 /* Menu principal */
@@ -48,6 +64,9 @@ header h1 {
     display: flex;
     justify-content: center;
     gap: 2rem;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 0;
 }
 
 .nav__menu-item {
@@ -60,6 +79,12 @@ header h1 {
     font-weight: bold;
     padding: 0.5rem 1rem;
     display: block;
+    transition: background 0.3s;
+    border-radius: 4px;
+}
+
+.nav__menu-item > a:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 /* Submenu */
@@ -71,14 +96,25 @@ header h1 {
     background: white;
     border: 1px solid #ccc;
     display: none;
-    min-width: 180px;
+    min-width: 220px;
     text-align: left;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 1000;
+    padding: 0;
+    margin: 0;
+}
+
+.nav__submenu-item {
+    list-style: none;
 }
 
 .nav__submenu-item a {
     color: #1a5d3c;
-    padding: 0.5rem 1rem;
+    padding: 0.7rem 1rem;
     display: block;
+    transition: background 0.2s;
 }
 
 .nav__submenu-item a:hover {
@@ -99,54 +135,142 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
 }
 
 button:hover {
     background: darkgreen;
 }
 
+/* Main */
+main {
+    padding: 2rem 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+main h2 {
+    color: #1a5d3c;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+}
+
 /* Rodapé */
 footer {
-    margin-top: 2rem;
-    padding: 1rem;
+    margin-top: 3rem;
+    padding: 1.5rem;
     background: #f0f0f0;
+    color: #666;
 }
 
 /* Produtos exibidos na home */
 .produtos-home {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.5rem;
     padding: 1rem;
     max-width: 1200px;
     margin: 0 auto;
 }
+
 .produto-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.5rem;
+    padding: 1rem;
     border: 1px solid #e6e6e6;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
+
+.produto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    border-color: #1a5d3c;
+}
+
 .produto-card img {
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
 }
+
 .produto-nome {
-    margin-top: 0.5rem;
+    margin-top: 0.7rem;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    color: #333;
+    text-align: center;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .produto-preco {
-    margin-top: 0.2rem;
+    margin-top: 0.3rem;
     color: #1a5d3c;
-    font-size: 0.95rem;
-    font-weight: 600;
-}
+    font-size: 1.1rem;
+    font-weight: 700;
 }
 
+.produto-estoque {
+    margin-top: 0.3rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .produtos-home {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+    
+    .nav__menu {
+        flex-direction: column;
+        gap: 0;
+        align-items: stretch;
+    }
+    
+    .nav__menu-item {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .nav__submenu {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+        border: none;
+        border-top: 1px solid #ccc;
+    }
+    
+    .topo {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .produtos-home {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .produto-card img {
+        width: 100px;
+        height: 100px;
+    }
+    
+    main h2 {
+        font-size: 1.5rem;
+    }
+}
