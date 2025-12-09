@@ -1,14 +1,10 @@
 const db = require('../database');
-const { enviarEmailRecuperacao } = require('../config/emailConfig');
 
 // ======================================
 // REGISTRO DE NOVO USUÁRIO
 // ======================================
 exports.registro = async (req, res) => {
-  const {
-    name, email, password, cpf, birthdate,
-    cidade, estado, rua, numero, cep, complemento, bairro
-  } = req.body;
+  const { name, email, password, cpf, birthdate } = req.body;
 
   console.log('🔍 Tentativa de registro:', { email, cpf });
 
@@ -121,6 +117,23 @@ exports.login = async (req, res) => {
 
     console.log('✅ Login bem-sucedido:', user.emailpessoa);
 
+    // Definir cookies
+    res.cookie('usuarioLogado', user.nomepessoa, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.cookie('usuarioCpf', user.cpfpessoa, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     res.json({
       message: 'Login efetuado com sucesso.',
       user: {
@@ -154,7 +167,6 @@ exports.verificarLogin = async (req, res) => {
   }
 
   try {
-    // Verificar se o usuário ainda existe no banco
     const result = await db.query(
       `SELECT p.cpfPessoa, p.nomePessoa, p.emailPessoa,
               f.PessoaCpfPessoa as is_funcionario, c.nomeCargo
@@ -274,7 +286,6 @@ exports.atualizarSenha = async (req, res) => {
   }
 
   try {
-    // Verificar senha atual
     const checkPassword = await db.query(
       'SELECT senhaPessoa FROM Pessoa WHERE cpfPessoa = $1',
       [cpf]
@@ -288,7 +299,6 @@ exports.atualizarSenha = async (req, res) => {
       return res.status(400).json({ error: 'Senha atual incorreta.' });
     }
 
-    // Atualizar senha
     await db.query(
       'UPDATE Pessoa SET senhaPessoa = $1 WHERE cpfPessoa = $2',
       [nova_senha, cpf]
@@ -301,238 +311,5 @@ exports.atualizarSenha = async (req, res) => {
   } catch (err) {
     console.error('❌ Erro ao atualizar senha:', err);
     res.status(500).json({ error: 'Erro ao atualizar senha.' });
-  }
-};
-
-// ======================================
-// RECUPERAÇÃO DE SENHA
-// ======================================
-
-const codigosRecuperacao = new Map();
-
-function gerarCodigo() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-exports.solicitarRecuperacao = async (req, res) => {
-  const { email } = req.body;
-
-  console.log('\n📧 [RECUPERAÇÃO] Solicitação para:', email);
-
-  if (!email) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Email é obrigatório' 
-    });
-  }
-
-  try {
-    const result = await db.query(
-      'SELECT cpfPessoa, nomePessoa, emailPessoa FROM Pessoa WHERE emailPessoa = $1',
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      console.log('❌ Email não encontrado:', email);
-      return res.status(404).json({ 
-        success: false,
-        error: 'Email não cadastrado no sistema' 
-      });
-    }
-
-    const user = result.rows[0];
-    const codigo = gerarCodigo();
-    
-    codigosRecuperacao.set(email, {
-      codigo: codigo,
-      timestamp: Date.now(),
-      tentativas: 0
-    });
-
-    console.log('✅ Código gerado:', codigo);
-    console.log('⏰ Válido por 10 minutos');
-
-    console.log('📨 Enviando email para:', email);
-    
-    const emailResult = await enviarEmailRecuperacao(
-      user.emailpessoa,
-      user.nomepessoa,
-      codigo
-    );
-
-    if (emailResult.success) {
-      console.log('✅ Email enviado com sucesso!');
-      
-      setTimeout(() => {
-        if (codigosRecuperacao.has(email)) {
-          codigosRecuperacao.delete(email);
-          console.log('🗑️ Código expirado removido para:', email);
-        }
-      }, 10 * 60 * 1000);
-
-      res.json({
-        success: true,
-        message: 'Código enviado para o email cadastrado'
-      });
-    } else {
-      console.error('❌ Falha ao enviar email:', emailResult.error);
-      console.log('⚠️ MODO FALLBACK - Código disponível no console');
-      console.log('\n╔════════════════════════════════════╗');
-      console.log('📨 CÓDIGO DE RECUPERAÇÃO (FALLBACK)');
-      console.log('╠════════════════════════════════════╣');
-      console.log('Para:', user.nomepessoa, `<${email}>`);
-      console.log('Código:', codigo);
-      console.log('╚════════════════════════════════════╝\n');
-      
-      res.json({
-        success: true,
-        message: 'Erro ao enviar email, mas o código está disponível. Verifique o console do servidor.',
-        warning: 'Email não enviado - verifique a configuração SMTP'
-      });
-    }
-
-  } catch (err) {
-    console.error('❌ Erro ao solicitar recuperação:', err);
-    res.status(500).json({ 
-      success: false,
-      error: 'Erro ao processar solicitação' 
-    });
-  }
-};
-
-exports.verificarCodigo = async (req, res) => {
-  const { email, code } = req.body;
-
-  console.log('\n🔍 [VERIFICAÇÃO] Email:', email, '| Código:', code);
-
-  if (!email || !code) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Email e código são obrigatórios' 
-    });
-  }
-
-  try {
-    const codigoData = codigosRecuperacao.get(email);
-
-    if (!codigoData) {
-      console.log('❌ Nenhum código encontrado para:', email);
-      return res.status(404).json({ 
-        success: false,
-        error: 'Código não encontrado ou expirado. Solicite um novo código.' 
-      });
-    }
-
-    const tempoDecorrido = Date.now() - codigoData.timestamp;
-    
-    if (tempoDecorrido > 10 * 60 * 1000) {
-      codigosRecuperacao.delete(email);
-      console.log('❌ Código expirado para:', email);
-      return res.status(400).json({ 
-        success: false,
-        error: 'Código expirado. Solicite um novo código.' 
-      });
-    }
-
-    if (codigoData.tentativas >= 5) {
-      codigosRecuperacao.delete(email);
-      console.log('❌ Muitas tentativas para:', email);
-      return res.status(429).json({ 
-        success: false,
-        error: 'Muitas tentativas. Solicite um novo código.' 
-      });
-    }
-
-    if (codigoData.codigo !== code) {
-      codigoData.tentativas++;
-      const tentativasRestantes = 5 - codigoData.tentativas;
-      console.log(`❌ Código incorreto (Tentativa ${codigoData.tentativas}/5)`);
-      return res.status(400).json({ 
-        success: false,
-        error: `Código incorreto. ${tentativasRestantes} tentativa(s) restante(s).` 
-      });
-    }
-
-    console.log('✅ Código verificado com sucesso!');
-
-    res.json({
-      success: true,
-      message: 'Código verificado com sucesso'
-    });
-
-  } catch (err) {
-    console.error('❌ Erro ao verificar código:', err);
-    res.status(500).json({ 
-      success: false,
-      error: 'Erro ao verificar código' 
-    });
-  }
-};
-
-exports.redefinirSenha = async (req, res) => {
-  const { email, code, nova_senha } = req.body;
-
-  console.log('\n🔑 [REDEFINIR] Alterando senha para:', email);
-
-  if (!email || !code || !nova_senha) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Email, código e nova senha são obrigatórios' 
-    });
-  }
-
-  if (nova_senha.length < 6 || nova_senha.length > 20) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'A senha deve ter entre 6 e 20 caracteres' 
-    });
-  }
-
-  try {
-    const codigoData = codigosRecuperacao.get(email);
-
-    if (!codigoData || codigoData.codigo !== code) {
-      console.log('❌ Código inválido ao redefinir senha');
-      return res.status(400).json({ 
-        success: false,
-        error: 'Código inválido ou expirado' 
-      });
-    }
-
-    const checkUser = await db.query(
-      'SELECT cpfPessoa, nomePessoa FROM Pessoa WHERE emailPessoa = $1',
-      [email]
-    );
-
-    if (checkUser.rows.length === 0) {
-      console.log('❌ Usuário não encontrado');
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuário não encontrado' 
-      });
-    }
-
-    const user = checkUser.rows[0];
-
-    await db.query(
-      'UPDATE Pessoa SET senhaPessoa = $1 WHERE emailPessoa = $2',
-      [nova_senha, email]
-    );
-
-    codigosRecuperacao.delete(email);
-
-    console.log('✅ Senha redefinida com sucesso para:', user.nomepessoa);
-
-    res.json({
-      success: true,
-      message: 'Senha alterada com sucesso'
-    });
-
-  } catch (err) {
-    console.error('❌ Erro ao redefinir senha:', err);
-    res.status(500).json({ 
-      success: false,
-      error: 'Erro ao redefinir senha' 
-    });
   }
 };

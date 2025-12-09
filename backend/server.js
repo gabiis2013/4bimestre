@@ -1,40 +1,35 @@
 const express = require('express');
 const app = express();
 const path = require('path');
-
 const cookieParser = require('cookie-parser');
 
 // Importar a configuração do banco PostgreSQL
-const db = require('./database'); // Ajuste o caminho conforme necessário
+const db = require('./database');
 
-// Configurações do servidor - quando em produção, você deve substituir o IP e a porta pelo do seu servidor remoto
-//const HOST = '192.168.1.100'; // Substitua pelo IP do seu servidor remoto
-const HOST = 'localhost'; // Para desenvolvimento local
-const PORT_FIXA = 3001; // Porta fixa
+// Configurações do servidor
+const HOST = 'localhost';
+const PORT_FIXA = 3001;
 
-// serve a pasta frontend como arquivos estáticos
-
-// serve a pasta frontend como arquivos estáticos
-
+// Servir pasta frontend como arquivos estáticos
 const caminhoFrontend = path.join(__dirname, '../frontend');
 console.log('Caminho frontend:', caminhoFrontend);
 
 app.use(express.static(caminhoFrontend));
 
-// Serve the images directory so frontend can reach '/imagens/...'
+// Serve the images directory
 app.use('/imagens', express.static(path.join(__dirname, '..', 'imagens')));
-
-
 
 app.use(cookieParser());
 
-// Middleware para permitir CORS (Cross-Origin Resource Sharing)
-// Isso é útil se você estiver fazendo requisições de um frontend que está rodando em um domínio diferente
-// ou porta do backend.
-// Em produção, você deve restringir isso para domínios específicos por segurança.
-// Aqui, estamos permitindo qualquer origem, o que é útil para desenvolvimento, mas deve ser ajustado em produção.
+// Middleware para permitir CORS
 app.use((req, res, next) => {
-  const allowedOrigins = ['http://127.0.0.1:5500','http://localhost:5500', 'http://127.0.0.1:5501', 'http://localhost:3000', 'http://localhost:3001'];
+  const allowedOrigins = [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'http://127.0.0.1:5501',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -44,7 +39,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200); // <-- responde ao preflight
+    return res.sendStatus(200);
   }
 
   next();
@@ -70,49 +65,57 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// só mexa nessa parte
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Importando as rotas
+// ==============================================
+// IMPORTANDO AS ROTAS
+// ==============================================
 
-//const loginRoutes = require('./routes/loginRoutes');
-//app.use('/login', loginRoutes);
+// Rota de autenticação (LOGIN/REGISTRO)
+const authRoutes = require('./routes/authRoutes');
+app.use('/auth', authRoutes);
 
+// Menu
 const menuRoutes = require('./routes/menuRoutes');
 app.use('/', menuRoutes);
 
+// Pessoa
 const pessoaRoutes = require('./routes/pessoaRoutes');
 app.use('/pessoa', pessoaRoutes);
 
+// Pedido
 const pedidoRoutes = require('./routes/pedidoRoutes');
 app.use('/pedido', pedidoRoutes);
 
+// Produto
 const produtoRoutes = require('./routes/produtoRoutes');
 app.use('/produto', produtoRoutes);
 
+// Funcionário
 const funcionarioRoutes = require('./routes/funcionarioRoutes');
 app.use('/funcionario', funcionarioRoutes);
 
+// Cliente
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/cliente', clienteRoutes);
 
-
+// Forma de Pagamento
 const formadepagamentoRoutes = require('./routes/formadepagamentoRoutes');
 app.use('/formadepagamento', formadepagamentoRoutes);
 
-
-//const avaliacaoHasQuestaoRoutes = require('./routes/avaliacaoHasQuestaoRoutes');
-//app.use('/avaliacaoHasQuestao', avaliacaoHasQuestaoRoutes);
-
+// Cargo
 const cargoRoutes = require('./routes/cargoRoutes');
 app.use('/cargo', cargoRoutes);
 
+// Pagamento
 const pagamentoRoutes = require('./routes/pagamentoRoutes');
 app.use('/pagamento', pagamentoRoutes);
 
-const imageRoutes = require('./routes/imageRoutes'); 
-app.use('/', imageRoutes); // Rota /upload-image
+// Imagens
+const imageRoutes = require('./routes/imageRoutes');
+app.use('/', imageRoutes);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ==============================================
+// ROTAS PADRÃO
+// ==============================================
 
 // Rota padrão
 app.get('/', (req, res) => {
@@ -123,13 +126,10 @@ app.get('/', (req, res) => {
   });
 });
 
-
 // Rota para testar a conexão com o banco
 app.get('/health', async (req, res) => {
   try {
-    
-
-    if (db.testConnection ) {
+    if (db.testConnection) {
       res.status(200).json({
         status: 'OK',
         message: 'Servidor e banco de dados funcionando',
@@ -175,12 +175,12 @@ app.use((req, res) => {
   });
 });
 
+// ==============================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ==============================================
 
-
-// Inicialização do servidor
 const startServer = async () => {
   try {
-    // Testar conexão com o banco antes de iniciar o servidor
     console.log(caminhoFrontend);
     console.log('Testando conexão com PostgreSQL...');
     const testConnection = await db.testConnection();
