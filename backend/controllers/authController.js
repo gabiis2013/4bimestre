@@ -313,3 +313,54 @@ exports.atualizarSenha = async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar senha.' });
   }
 };
+
+// ======================================
+// ROTAS DE RECUPERAÇÃO DE SENHA (IMPLEMENTAÇÕES INICIAIS)
+// ======================================
+
+exports.solicitarRecuperacao = (req, res) => {
+  const { email } = req.body;
+  console.log('🚧 [STUB] Solicitação de recuperação recebida para:', email);
+  // Lógica futura: 
+  // 1. Verificar se o email existe.
+  // 2. Gerar um código único.
+  // 3. Salvar o código e o timestamp no banco de dados (tabela de tokens/recuperação).
+  // 4. Enviar o código por email.
+  res.json({
+    success: true,
+    message: 'Se o e-mail estiver cadastrado, um código de recuperação foi enviado.'
+    // Para DEV, você pode retornar o código aqui: codigo_dev: '123456' 
+  }); 
+};
+
+exports.verificarCodigo = (req, res) => {
+  const { email, code } = req.body;
+  console.log('🚧 [STUB] Verificação de código recebida para:', { email, code });
+  // Lógica futura: 
+  // 1. Buscar o código no banco de dados para o email.
+  // 2. Verificar se o código corresponde e se não está expirado.
+  res.json({
+    success: true,
+    message: 'Código verificado com sucesso.'
+  });
+};
+
+exports.redefinirSenha = async (req, res) => {
+  const { email, code, nova_senha } = req.body;
+
+  if (nova_senha.length > 20) {
+    return res.status(400).json({ error: 'Nova senha deve ter no máximo 20 caracteres.' });
+  }
+  
+  console.log('🚧 [STUB] Redefinição de senha recebida para:', email);
+  // Lógica futura: 
+  // 1. Verificar o código e o email (novamente).
+  // 2. Se válido, atualizar a senha (senhaPessoa) para o novo valor.
+  // 3. Invalidar/deletar o token de recuperação.
+  
+  // Por enquanto, apenas simula o sucesso:
+  res.json({
+    success: true,
+    message: 'Senha redefinida com sucesso.'
+  });
+};
