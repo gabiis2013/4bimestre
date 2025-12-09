@@ -12,14 +12,10 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
 });
 
-<<<<<<< HEAD
+
 // Diretório onde as imagens finais serão salvas (ajuste conforme a estrutura do seu projeto)
-// Use 'produtos' com S (plural) para combinar com o caminho usado no frontend.
+// Foi escolhido 'produtos' (plural) para consistência no projeto.
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'imagens', 'produtos');
-=======
-// Diretório onde as imagens finais são salvas
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'imagens', 'produto');
->>>>>>> 46bac7717ca3a7605a6a665740fe4cf4f0cf9283
 
 
 // Middleware para garantir que o diretório de upload existe
@@ -72,25 +68,17 @@ router.post('/upload-image', upload.single('imageFile'), async (req, res) => {
         
         const finalBuffer = pngBuffer; 
         const extensao = 'png'; 
-<<<<<<< HEAD
         
         // Nome do arquivo final: produtoId.extensao (ex.: 1.png)
-=======
->>>>>>> 46bac7717ca3a7605a6a665740fe4cf4f0cf9283
         const filename = `${produtoId}.${extensao}`;
         const finalPath = path.join(UPLOAD_DIR, filename);
         
         // Salvar o buffer PNG no arquivo
         await fs.writeFile(finalPath, finalBuffer);
         
-<<<<<<< HEAD
-      //  console.log('✅ Imagem salva com sucesso em:', finalPath);
-      //  console.log('📁 Tamanho do arquivo:', finalBuffer.length, 'bytes');
-
         // Retorna a URL pública também (/imagens/produtos/ID.png)
         const publicUrl = `/imagens/produtos/${filename}`;
-=======
->>>>>>> 46bac7717ca3a7605a6a665740fe4cf4f0cf9283
+        
         res.status(200).json({ 
             message: 'Imagem salva com sucesso!', 
             filename: filename,
